@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: nex-nodo-conferencia
+    env: docker
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: BQ_PROJECT_ID
+        value: meli-bi-data
+      - key: BQ_LOCATION
+        value: US
+      - key: BQ_SCAN_TABLE
+        value: meli-bi-data.nex_operacao.nodo_package_conferences

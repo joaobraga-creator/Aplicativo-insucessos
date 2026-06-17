@@ -1,0 +1,14 @@
+node_modules/
+.env
+*.log
+*.key
+*.pem
+Chave*
+chave*
+execution-*.json
+verdi-*.json
+existing-workflow-model.json
+new-workflow.json
+grid-preview.html
+main-*.js
+App-*.js

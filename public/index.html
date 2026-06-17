@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Conferencia Nodo</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="capture-panel">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">NEX MLB</p>
+            <h1>Conferencia de retirada</h1>
+          </div>
+          <div class="counter">
+            <span id="scanCount">0</span>
+            <small>pacotes</small>
+          </div>
+        </div>
+
+        <form id="conferenceForm" class="form-grid">
+          <label>
+            Nodo / place
+            <input id="nodoPlace" autocomplete="organization" placeholder="BRNPI916" required>
+          </label>
+          <label>
+            Motorista
+            <input id="driverName" autocomplete="name" placeholder="Nome completo" required>
+          </label>
+          <label>
+            Documento
+            <input id="driverDocument" inputmode="numeric" placeholder="CPF ou ID">
+          </label>
+          <label>
+            Placa
+            <input id="driverPlate" autocomplete="off" placeholder="ABC1D23" required>
+          </label>
+          <label>
+            Transportadora
+            <input id="carrier" autocomplete="organization" placeholder="Transportadora">
+          </label>
+          <label>
+            Rota
+            <input id="routeId" autocomplete="off" placeholder="ID da rota">
+          </label>
+          <label class="full">
+            Operador do nodo
+            <input id="operatorName" autocomplete="name" placeholder="Quem esta conferindo">
+          </label>
+        </form>
+
+        <div class="scan-box">
+          <label for="scanInput">Escanear codigo</label>
+          <div class="scan-row">
+            <input id="scanInput" autocomplete="off" inputmode="numeric" placeholder="Bipe ou digite o shipment ID">
+            <button id="addScan" type="button">Adicionar</button>
+            <button id="cameraToggle" class="secondary" type="button">Camera</button>
+          </div>
+          <video id="cameraPreview" playsinline muted hidden></video>
+          <p id="cameraHint" class="hint">Scanner fisico funciona direto neste campo. A camera depende do navegador do celular.</p>
+        </div>
+
+        <section class="list-panel" aria-live="polite">
+          <div class="section-title">
+            <h2>Pacotes conferidos</h2>
+            <button id="clearScans" class="ghost" type="button">Limpar</button>
+          </div>
+          <div id="emptyState" class="empty-state">Nenhum pacote escaneado ainda.</div>
+          <ol id="scanList" class="scan-list"></ol>
+        </section>
+
+        <section class="signature-panel">
+          <div class="section-title">
+            <h2>Assinatura do motorista</h2>
+            <button id="clearSignature" class="ghost" type="button">Refazer</button>
+          </div>
+          <canvas id="signaturePad" width="900" height="300"></canvas>
+        </section>
+
+        <label class="notes">
+          Observacao
+          <textarea id="notes" rows="3" placeholder="Opcional"></textarea>
+        </label>
+
+        <div class="actions">
+          <button id="submitConference" type="button">Salvar no BigQuery</button>
+          <p id="statusText" role="status"></p>
+        </div>
+      </section>
+    </main>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

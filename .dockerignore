@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+*.key
+Chave*
+chave*
+execution-*.json
+verdi-*.json
+existing-workflow-model.json
+new-workflow.json
+grid-preview.html
+main-*.js
+App-*.js

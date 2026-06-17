@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { BigQuery } from '@google-cloud/bigquery';
+import { OAuth2Client } from 'google-auth-library';
 
 const app = express();
 const port = Number(process.env.PORT || 8080);
@@ -12,7 +13,54 @@ const queryPath = process.env.QUERY_PATH || new URL('./query_insucessos_nex_mlb.
 const scanTable = process.env.BQ_SCAN_TABLE || 'meli-bi-data.SBOX_MLBPLACES.nodo_package_conferences';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const bigquery = new BigQuery({ projectId });
+async function loadGoogleCredentials() {
+  if (process.env.GOOGLE_CREDENTIALS_JSON) {
+    return JSON.parse(process.env.GOOGLE_CREDENTIALS_JSON);
+  }
+
+  if (process.env.GOOGLE_CREDENTIALS_FILE) {
+    return JSON.parse(await fs.readFile(process.env.GOOGLE_CREDENTIALS_FILE, 'utf8'));
+  }
+
+  return null;
+}
+
+let oauthInsertClient = null;
+
+async function createBigQueryClient() {
+  const credentialData = await loadGoogleCredentials();
+  if (!credentialData) {
+    return new BigQuery({ projectId });
+  }
+
+  if (credentialData.refresh_token && credentialData.client_id && credentialData.client_secret) {
+    const authClient = new OAuth2Client({
+      clientId: credentialData.client_id,
+      clientSecret: credentialData.client_secret,
+      redirectUri: credentialData.redirect_uri
+    });
+    authClient.setCredentials({
+      refresh_token: credentialData.refresh_token
+    });
+    authClient.quotaProjectId = projectId;
+    oauthInsertClient = authClient;
+    return new BigQuery({ projectId, authClient });
+  }
+
+  if (credentialData.client_email && credentialData.private_key) {
+    return new BigQuery({
+      projectId,
+      credentials: {
+        client_email: credentialData.client_email,
+        private_key: credentialData.private_key
+      }
+    });
+  }
+
+  throw new Error('GOOGLE_CREDENTIALS_JSON/FILE deve conter credencial authorized_user ou service_account valida.');
+}
+
+const bigquery = await createBigQueryClient();
 let cache = { rows: [], updatedAt: null, expiresAt: 0 };
 
 function cors(res) {
@@ -96,6 +144,26 @@ function buildConferenceRows(payload, req) {
   }));
 }
 
+async function insertConferenceRows(tableRef, rows) {
+  if (!oauthInsertClient) {
+    await bigquery
+      .dataset(tableRef.dataset, { projectId: tableRef.project })
+      .table(tableRef.table)
+      .insert(rows, { raw: true });
+    return;
+  }
+
+  await oauthInsertClient.request({
+    method: 'POST',
+    url: `https://bigquery.googleapis.com/bigquery/v2/projects/${tableRef.project}/datasets/${tableRef.dataset}/tables/${tableRef.table}/insertAll`,
+    data: {
+      rows,
+      skipInvalidRows: false,
+      ignoreUnknownValues: false
+    }
+  });
+}
+
 app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -152,10 +220,7 @@ app.post('/api/nodo-conferences', async (req, res) => {
   try {
     const rows = buildConferenceRows(req.body || {}, req);
     const tableRef = parseTableId(scanTable);
-    await bigquery
-      .dataset(tableRef.dataset, { projectId: tableRef.project })
-      .table(tableRef.table)
-      .insert(rows, { raw: true });
+    await insertConferenceRows(tableRef, rows);
 
     res.status(201).json({
       ok: true,

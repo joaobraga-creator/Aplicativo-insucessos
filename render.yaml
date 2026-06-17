@@ -13,3 +13,5 @@ services:
         value: US
       - key: BQ_SCAN_TABLE
         value: meli-bi-data.SBOX_MLBPLACES.nodo_package_conferences
+      - key: GOOGLE_CREDENTIALS_JSON
+        sync: false

@@ -10,7 +10,7 @@ Este servico tem duas partes:
 Configure a chave da service account fora do HTML/Grid:
 
 ```powershell
-$env:GOOGLE_APPLICATION_CREDENTIALS="C:\caminho\para\service-account.json"
+$env:GOOGLE_CREDENTIALS_FILE="C:\caminho\para\google_oauth.json"
 $env:BQ_PROJECT_ID="meli-bi-data"
 $env:BQ_SCAN_TABLE="meli-bi-data.SBOX_MLBPLACES.nodo_package_conferences"
 npm install
@@ -32,7 +32,7 @@ bq --project_id=meli-bi-data query --location=US --use_legacy_sql=false < bigque
 
 O app aceita scanner fisico como teclado no campo de leitura. Em celulares compativeis, o botao Camera usa a API nativa do navegador para ler codigo de barras.
 
-A chave nunca deve ir para HTML, Grid ou frontend. O BigQuery e acessado somente pelo servidor.
+A credencial nunca deve ir para HTML, Grid ou frontend. O BigQuery e acessado somente pelo servidor.
 
 ## Deploy no Render
 
@@ -44,10 +44,12 @@ Request is prohibited by organization's policy
 
 Nesse caso, use Cloud Run/Fury dentro do ambiente permitido. Render pode servir a tela, mas nao deve ser usado para gravar no BigQuery protegido.
 
-Se ainda for usado em um ambiente sem VPC Service Controls, configure a credencial do Google de uma destas formas:
+Neste app, para reproduzir o comportamento do Places Chamados, prefira usar OAuth de usuario autorizado:
 
-- `GOOGLE_APPLICATION_CREDENTIALS` apontando para um arquivo de chave montado como Secret File.
-- Ou `GOOGLE_APPLICATION_CREDENTIALS_JSON` se voce adaptar o start para materializar a chave antes de subir o Node.
+- `GOOGLE_CREDENTIALS_JSON`: JSON completo do arquivo `authorized_user`, por exemplo `google_oauth.json`.
+- `GOOGLE_CREDENTIALS_FILE`: apenas para dev local, caminho do arquivo `google_oauth.json`.
+
+Evite usar service account no Render se a tabela exigir a identidade do usuario `joao.braga@mercadolivre.com`.
 
 Variaveis esperadas:
 
@@ -55,6 +57,7 @@ Variaveis esperadas:
 BQ_PROJECT_ID=meli-bi-data
 BQ_LOCATION=US
 BQ_SCAN_TABLE=meli-bi-data.SBOX_MLBPLACES.nodo_package_conferences
+GOOGLE_CREDENTIALS_JSON={...conteudo do google_oauth.json...}
 ```
 
 ## Deploy recomendado em GCP

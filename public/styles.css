@@ -114,29 +114,17 @@ button:disabled {
 
 .brand-mark {
   display: grid;
-  width: 50px;
-  height: 42px;
+  width: 54px;
+  height: 40px;
   place-items: center;
   flex: 0 0 auto;
+  overflow: hidden;
 }
 
-.brand-mark svg {
-  width: 50px;
-  height: 42px;
-}
-
-.brand-mark ellipse {
-  fill: #fff159;
-  stroke: #25314f;
-  stroke-width: 3;
-}
-
-.brand-mark path {
-  fill: none;
-  stroke: #25314f;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 3;
+.brand-mark img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .brand-meta {

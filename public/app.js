@@ -31,6 +31,10 @@ let hasSignature = false;
 let cameraStream = null;
 let cameraTimer = null;
 let barcodeDetector = null;
+let zxingReader = null;
+let zxingControls = null;
+let lastCameraCode = '';
+let lastCameraCodeAt = 0;
 
 function nowIso() {
   return new Date().toISOString();
@@ -94,6 +98,16 @@ function addScan(value) {
   saveDraft();
   renderScans();
   scanInput.focus();
+}
+
+function addCameraScan(value) {
+  const code = normalizeCode(value);
+  const now = Date.now();
+  if (!code) return;
+  if (code === lastCameraCode && now - lastCameraCodeAt < 2500) return;
+  lastCameraCode = code;
+  lastCameraCodeAt = now;
+  addScan(code);
 }
 
 function resizeSignaturePad() {
@@ -212,20 +226,21 @@ async function submitConference() {
 async function stopCamera() {
   clearInterval(cameraTimer);
   cameraTimer = null;
+  if (zxingControls) {
+    zxingControls.stop();
+  }
+  zxingControls = null;
   if (cameraStream) {
     cameraStream.getTracks().forEach((track) => track.stop());
   }
   cameraStream = null;
+  cameraPreview.srcObject = null;
   cameraPreview.hidden = true;
   cameraToggle.textContent = 'Camera';
+  cameraHint.textContent = 'Use o leitor do nodo ou a camera do celular. A leitura continua enquanto a camera estiver aberta.';
 }
 
-async function startCamera() {
-  if (!('BarcodeDetector' in window)) {
-    setStatus('Camera para codigo de barras nao esta disponivel neste navegador.', 'error');
-    return;
-  }
-
+async function startNativeBarcodeDetector() {
   barcodeDetector ||= new BarcodeDetector({
     formats: ['code_128', 'code_39', 'ean_13', 'qr_code']
   });
@@ -242,11 +257,47 @@ async function startCamera() {
   cameraTimer = setInterval(async () => {
     try {
       const codes = await barcodeDetector.detect(cameraPreview);
-      if (codes[0]?.rawValue) addScan(codes[0].rawValue);
+      if (codes[0]?.rawValue) addCameraScan(codes[0].rawValue);
     } catch {
       clearInterval(cameraTimer);
     }
   }, 700);
+}
+
+async function startZxingCamera() {
+  if (!window.ZXingBrowser?.BrowserMultiFormatReader) {
+    throw new Error('Leitor de camera nao carregou. Use o scanner fisico ou tente atualizar a pagina.');
+  }
+
+  zxingReader ||= new ZXingBrowser.BrowserMultiFormatReader(undefined, {
+    delayBetweenScanAttempts: 350,
+    delayBetweenScanSuccess: 900
+  });
+  cameraPreview.hidden = false;
+  cameraToggle.textContent = 'Parar';
+  cameraHint.textContent = 'Aponte para o codigo. Se pedir permissao, libere a camera do navegador.';
+
+  zxingControls = await zxingReader.decodeFromVideoDevice(undefined, cameraPreview, (result) => {
+    if (result) addCameraScan(result.getText());
+  });
+}
+
+async function startCamera() {
+  setStatus('');
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error('Este navegador nao liberou acesso a camera. Use HTTPS ou o scanner fisico.');
+  }
+
+  if ('BarcodeDetector' in window) {
+    try {
+      await startNativeBarcodeDetector();
+      return;
+    } catch {
+      await stopCamera();
+    }
+  }
+
+  await startZxingCamera();
 }
 
 addScanButton.addEventListener('click', () => addScan(scanInput.value));

@@ -6,10 +6,15 @@
   "scripts": {
     "start": "node server.js",
     "check": "node --check server.js && node --check refresh-grid.js && node --check public/app.js",
+    "build:vendor": "esbuild node_modules/@zxing/browser/esm/index.js --bundle --format=iife --global-name=ZXingBrowser --footer:js=\"globalThis.ZXingBrowser=ZXingBrowser;\" --outfile=public/vendor/zxing-browser.bundle.js --minify",
     "refresh:grid": "node refresh-grid.js"
   },
   "dependencies": {
     "@google-cloud/bigquery": "^7.9.4",
     "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "@zxing/browser": "^0.2.0",
+    "esbuild": "^0.28.1"
   }
 }

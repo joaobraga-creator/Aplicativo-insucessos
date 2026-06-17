@@ -3,15 +3,25 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Conferencia Nodo</title>
+    <title>Conferencia Nodo | Mercado Livre</title>
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
+    <header class="brand-bar">
+      <div class="brand-content">
+        <div class="brand-mark" aria-label="Mercado Livre">ML</div>
+        <div>
+          <strong>Mercado Livre</strong>
+          <span>Gestao de Nodos NEX</span>
+        </div>
+      </div>
+    </header>
+
     <main class="app-shell">
       <section class="capture-panel">
         <div class="topbar">
           <div>
-            <p class="eyebrow">NEX MLB</p>
+            <p class="eyebrow">Operacao MLB</p>
             <h1>Conferencia de retirada</h1>
           </div>
           <div class="counter">
@@ -59,7 +69,7 @@
             <button id="cameraToggle" class="secondary" type="button">Camera</button>
           </div>
           <video id="cameraPreview" playsinline muted hidden></video>
-          <p id="cameraHint" class="hint">Scanner fisico funciona direto neste campo. A camera depende do navegador do celular.</p>
+          <p id="cameraHint" class="hint">Use o leitor do nodo ou a camera do celular quando disponivel.</p>
         </div>
 
         <section class="list-panel" aria-live="polite">
@@ -85,7 +95,7 @@
         </label>
 
         <div class="actions">
-          <button id="submitConference" type="button">Salvar no BigQuery</button>
+          <button id="submitConference" type="button">Salvar conferencia</button>
           <p id="statusText" role="status"></p>
         </div>
       </section>

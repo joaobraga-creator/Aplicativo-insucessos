@@ -130,6 +130,20 @@
         <div id="historyList" class="history-list"></div>
       </section>
     </main>
+
+    <section id="waybillModal" class="waybill-modal" aria-labelledby="waybillTitle" aria-modal="true" role="dialog" hidden>
+      <div class="waybill-backdrop" data-close-waybill></div>
+      <article class="waybill-sheet">
+        <div class="waybill-actions">
+          <button id="closeWaybill" class="secondary" type="button">Fechar</button>
+          <button id="printWaybill" type="button">Imprimir</button>
+        </div>
+        <div id="waybillContent" class="waybill-content">
+          <p id="waybillStatus" class="hint" role="status">Carregando romaneio...</p>
+        </div>
+      </article>
+    </section>
+
     <script src="/vendor/zxing-browser.bundle.js"></script>
     <script src="/app.js" type="module"></script>
   </body>

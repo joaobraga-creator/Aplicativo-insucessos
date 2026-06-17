@@ -31,6 +31,10 @@ const refreshHistoryButton = document.querySelector('#refreshHistory');
 const historyStatus = document.querySelector('#historyStatus');
 const historyEmpty = document.querySelector('#historyEmpty');
 const historyList = document.querySelector('#historyList');
+const waybillModal = document.querySelector('#waybillModal');
+const waybillContent = document.querySelector('#waybillContent');
+const closeWaybillButton = document.querySelector('#closeWaybill');
+const printWaybillButton = document.querySelector('#printWaybill');
 
 const ctx = canvas.getContext('2d');
 let scans = loadScans();
@@ -162,6 +166,7 @@ function renderHistory(rows) {
           <span>${formatDateTime(row.signed_at)}</span>
         </div>
         <div class="history-shipments">${visibleShipments}${extra}</div>
+        <button class="secondary history-open" type="button" data-session-id="${escapeHtml(row.session_id)}">Abrir romaneio</button>
       </article>
     `;
   }).join('');
@@ -192,6 +197,121 @@ async function loadHistory() {
     refreshHistoryButton.disabled = false;
     searchHistoryButton.disabled = false;
   }
+}
+
+function setWaybillLoading(message = 'Carregando romaneio...') {
+  waybillContent.innerHTML = `<p id="waybillStatus" class="hint" role="status">${escapeHtml(message)}</p>`;
+}
+
+function renderWaybill(row) {
+  const packages = Array.isArray(row.packages) ? row.packages : [];
+  const packageRows = packages.map((item, index) => `
+    <tr>
+      <td>${index + 1}</td>
+      <td>${escapeHtml(item.shipment_id || '')}</td>
+      <td>${escapeHtml(item.scan_sequence || index + 1)}</td>
+      <td>${formatDateTime(item.scanned_at)}</td>
+    </tr>
+  `).join('');
+  const signature = row.signature_png
+    ? `<img class="waybill-signature-img" src="${escapeHtml(row.signature_png)}" alt="Assinatura do motorista">`
+    : '<div class="waybill-no-signature">Assinatura nao encontrada.</div>';
+
+  waybillContent.innerHTML = `
+    <header class="waybill-header">
+      <div>
+        <p class="eyebrow">Romaneio de conferencia</p>
+        <h1 id="waybillTitle">Retirada NEX - ${escapeHtml(row.nodo_place || 'Nodo nao informado')}</h1>
+        <p>${escapeHtml(row.session_id || '')}</p>
+      </div>
+      <strong>${Number(row.package_count || packages.length || 0)} pacotes</strong>
+    </header>
+
+    <section class="waybill-grid">
+      <div>
+        <span>Nodo / place</span>
+        <strong>${escapeHtml(row.nodo_place || '-')}</strong>
+      </div>
+      <div>
+        <span>Data da assinatura</span>
+        <strong>${formatDateTime(row.signed_at)}</strong>
+      </div>
+      <div>
+        <span>Motorista</span>
+        <strong>${escapeHtml(row.driver_name || '-')}</strong>
+      </div>
+      <div>
+        <span>Documento</span>
+        <strong>${escapeHtml(row.driver_document || '-')}</strong>
+      </div>
+      <div>
+        <span>Placa</span>
+        <strong>${escapeHtml(row.driver_plate || '-')}</strong>
+      </div>
+      <div>
+        <span>Transportadora</span>
+        <strong>${escapeHtml(row.carrier || '-')}</strong>
+      </div>
+      <div>
+        <span>Rota</span>
+        <strong>${escapeHtml(row.route_id || '-')}</strong>
+      </div>
+      <div>
+        <span>Operador</span>
+        <strong>${escapeHtml(row.operator_name || '-')}</strong>
+      </div>
+    </section>
+
+    <section class="waybill-notes">
+      <span>Observacao</span>
+      <p>${escapeHtml(row.notes || '-')}</p>
+    </section>
+
+    <section class="waybill-packages">
+      <h2>Pacotes conferidos</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Shipment ID</th>
+            <th>Sequencia</th>
+            <th>Escaneado em</th>
+          </tr>
+        </thead>
+        <tbody>${packageRows}</tbody>
+      </table>
+    </section>
+
+    <section class="waybill-signature">
+      <h2>Assinatura do motorista</h2>
+      ${signature}
+      <div class="waybill-signature-line">
+        <span>${escapeHtml(row.driver_name || 'Motorista')}</span>
+      </div>
+    </section>
+  `;
+}
+
+async function openWaybill(sessionId) {
+  waybillModal.hidden = false;
+  document.body.classList.add('modal-open');
+  setWaybillLoading();
+
+  try {
+    const response = await fetch(`/api/nodo-conferences/history/${encodeURIComponent(sessionId)}`);
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Falha ao carregar romaneio.');
+    }
+    renderWaybill(result.row);
+  } catch (error) {
+    setWaybillLoading(error.message);
+  }
+}
+
+function closeWaybill() {
+  waybillModal.hidden = true;
+  document.body.classList.remove('modal-open');
 }
 
 function addScan(value) {
@@ -424,6 +544,19 @@ historySearch.addEventListener('keydown', (event) => {
     event.preventDefault();
     loadHistory();
   }
+});
+historyList.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-session-id]');
+  if (!button) return;
+  openWaybill(button.dataset.sessionId);
+});
+closeWaybillButton.addEventListener('click', closeWaybill);
+waybillModal.addEventListener('click', (event) => {
+  if (event.target.matches('[data-close-waybill]')) closeWaybill();
+});
+printWaybillButton.addEventListener('click', () => window.print());
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !waybillModal.hidden) closeWaybill();
 });
 scanInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {

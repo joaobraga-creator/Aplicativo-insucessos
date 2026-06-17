@@ -169,7 +169,16 @@ async function insertConferenceRows(tableRef, rows) {
 
 function decodeBigQueryRestValue(field, cell = {}) {
   if (field.mode === 'REPEATED') {
-    return Array.isArray(cell.v) ? cell.v.map((item) => item.v) : [];
+    return Array.isArray(cell.v) ? cell.v.map((item) => decodeBigQueryRestValue({ ...field, mode: 'NULLABLE' }, item)) : [];
+  }
+  if (field.type === 'RECORD' || field.type === 'STRUCT') {
+    const values = cell.v?.f || [];
+    return Object.fromEntries(
+      (field.fields || []).map((nestedField, index) => [
+        nestedField.name,
+        decodeBigQueryRestValue(nestedField, values[index])
+      ])
+    );
   }
   return cell.v ?? null;
 }
@@ -222,6 +231,40 @@ async function runConferenceHistoryQuery(query, cleanLimit, cleanSearch) {
   return decodeBigQueryRestRows(response);
 }
 
+async function runConferenceDetailQuery(query, sessionId) {
+  if (!oauthInsertClient) {
+    const [job] = await bigquery.createQueryJob({
+      query,
+      location: process.env.BQ_LOCATION || 'US',
+      params: {
+        session_id: sessionId
+      }
+    });
+    const [rows] = await job.getQueryResults();
+    return rows[0] || null;
+  }
+
+  const response = await oauthInsertClient.request({
+    method: 'POST',
+    url: `https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/queries`,
+    data: {
+      query,
+      useLegacySql: false,
+      location: process.env.BQ_LOCATION || 'US',
+      parameterMode: 'NAMED',
+      queryParameters: [
+        {
+          name: 'session_id',
+          parameterType: { type: 'STRING' },
+          parameterValue: { value: sessionId }
+        }
+      ]
+    }
+  });
+
+  return decodeBigQueryRestRows(response)[0] || null;
+}
+
 async function queryConferenceHistory({ limit = 80, search = '' } = {}) {
   const tableRef = parseTableId(scanTable);
   const tableName = `\`${tableRef.project}.${tableRef.dataset}.${tableRef.table}\``;
@@ -263,6 +306,49 @@ async function queryConferenceHistory({ limit = 80, search = '' } = {}) {
   `;
 
   return runConferenceHistoryQuery(query, cleanLimit, cleanSearch);
+}
+
+async function queryConferenceDetail(sessionId) {
+  const tableRef = parseTableId(scanTable);
+  const tableName = `\`${tableRef.project}.${tableRef.dataset}.${tableRef.table}\``;
+  const cleanSessionId = text(sessionId, 80);
+
+  if (!cleanSessionId) {
+    const error = new Error('Session ID obrigatorio.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const query = `
+    SELECT
+      session_id,
+      ANY_VALUE(nodo_place) AS nodo_place,
+      ANY_VALUE(driver_name) AS driver_name,
+      ANY_VALUE(driver_document) AS driver_document,
+      ANY_VALUE(driver_plate) AS driver_plate,
+      ANY_VALUE(carrier) AS carrier,
+      ANY_VALUE(route_id) AS route_id,
+      ANY_VALUE(operator_name) AS operator_name,
+      ANY_VALUE(notes) AS notes,
+      ANY_VALUE(signature_png) AS signature_png,
+      MIN(scanned_at) AS first_scanned_at,
+      MAX(signed_at) AS signed_at,
+      COUNT(DISTINCT shipment_id) AS package_count,
+      ARRAY_AGG(
+        STRUCT(
+          shipment_id,
+          scan_sequence,
+          scanned_at
+        )
+        ORDER BY scan_sequence, shipment_id
+      ) AS packages
+    FROM ${tableName}
+    WHERE session_id = @session_id
+    GROUP BY session_id
+    LIMIT 1
+  `;
+
+  return runConferenceDetailQuery(query, cleanSessionId);
 }
 
 app.use(express.json({ limit: '8mb' }));
@@ -331,6 +417,32 @@ app.get('/api/nodo-conferences/history', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: 'BIGQUERY_HISTORY_FAILED',
+      message: error.message,
+      errors: error.errors
+    });
+  }
+});
+
+app.get('/api/nodo-conferences/history/:sessionId', async (req, res) => {
+  cors(res);
+
+  try {
+    const row = await queryConferenceDetail(req.params.sessionId);
+    if (!row) {
+      return res.status(404).json({
+        error: 'CONFERENCE_NOT_FOUND',
+        message: 'Conferencia nao encontrada.'
+      });
+    }
+
+    res.json({
+      ok: true,
+      table: scanTable,
+      row
+    });
+  } catch (error) {
+    res.status(error.statusCode || 500).json({
+      error: 'BIGQUERY_DETAIL_FAILED',
       message: error.message,
       errors: error.errors
     });

@@ -416,6 +416,184 @@ canvas:focus {
   padding: 5px 8px;
 }
 
+.history-open {
+  justify-self: start;
+}
+
+.waybill-modal[hidden] {
+  display: none;
+}
+
+.waybill-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: start center;
+  overflow: auto;
+  padding: 28px 16px;
+}
+
+.waybill-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.56);
+}
+
+.waybill-sheet {
+  position: relative;
+  z-index: 1;
+  width: min(980px, 100%);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgba(17, 24, 39, 0.28);
+}
+
+.waybill-actions {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  background: #fffdf2;
+  padding: 12px;
+}
+
+.waybill-content {
+  padding: 28px;
+}
+
+.waybill-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 3px solid var(--ml-yellow);
+  padding-bottom: 18px;
+}
+
+.waybill-header h1 {
+  margin: 4px 0;
+  color: var(--ink);
+}
+
+.waybill-header p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.waybill-header strong {
+  display: grid;
+  min-width: 110px;
+  height: 54px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--ml-yellow);
+  color: var(--ml-blue);
+}
+
+.waybill-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.waybill-grid div,
+.waybill-notes {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.waybill-grid span,
+.waybill-notes span {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.waybill-grid strong,
+.waybill-notes p {
+  display: block;
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.waybill-notes {
+  margin-top: 10px;
+}
+
+.waybill-packages {
+  margin-top: 22px;
+}
+
+.waybill-packages h2,
+.waybill-signature h2 {
+  margin: 0 0 10px;
+  font-size: 16px;
+}
+
+.waybill-packages table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.waybill-packages th,
+.waybill-packages td {
+  border: 1px solid var(--line);
+  padding: 8px;
+  text-align: left;
+}
+
+.waybill-packages th {
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.waybill-signature {
+  margin-top: 24px;
+  page-break-inside: avoid;
+}
+
+.waybill-signature-img,
+.waybill-no-signature {
+  display: block;
+  width: 360px;
+  max-width: 100%;
+  min-height: 96px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.waybill-no-signature {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.waybill-signature-line {
+  width: 360px;
+  max-width: 100%;
+  margin-top: 12px;
+  border-top: 1px solid var(--ink);
+  padding-top: 6px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .empty-state {
   display: grid;
   min-height: 88px;
@@ -525,5 +703,56 @@ canvas:focus {
 
   .history-card header {
     flex-direction: column;
+  }
+
+  .waybill-content {
+    padding: 18px;
+  }
+
+  .waybill-header {
+    flex-direction: column;
+  }
+
+  .waybill-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body {
+    background: #ffffff;
+  }
+
+  body > header,
+  body > nav,
+  main,
+  .waybill-backdrop,
+  .waybill-actions {
+    display: none !important;
+  }
+
+  .waybill-modal,
+  .waybill-sheet {
+    position: static;
+    display: block;
+    overflow: visible;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .waybill-sheet {
+    width: 100%;
+  }
+
+  .waybill-content {
+    padding: 0;
+  }
+
+  .waybill-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }

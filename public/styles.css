@@ -142,12 +142,21 @@ button:disabled {
   background: #ffffff;
 }
 
-.subnav span {
+.subnav button {
   display: grid;
   place-items: center;
+  min-height: 46px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: #687083;
   font-size: 14px;
   font-weight: 700;
+  box-shadow: none;
+}
+
+.subnav button:hover {
+  background: #f8fafc;
 }
 
 .subnav .active {
@@ -334,6 +343,79 @@ canvas:focus {
   border: 1px solid #ffd0d5;
 }
 
+.history-view {
+  margin-top: 0;
+}
+
+.history-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-top: 16px;
+}
+
+.history-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.history-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 12px;
+}
+
+.history-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-card h2 {
+  margin: 0 0 4px;
+}
+
+.history-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.history-badge {
+  display: grid;
+  min-width: 72px;
+  place-items: center;
+  align-self: start;
+  border-radius: 10px;
+  background: var(--surface-yellow);
+  color: #a26800;
+  font-weight: 800;
+  padding: 8px;
+}
+
+.history-meta,
+.history-shipments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-meta span,
+.history-shipments span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #4b5565;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 8px;
+}
+
 .empty-state {
   display: grid;
   min-height: 88px;
@@ -420,14 +502,28 @@ canvas:focus {
   }
 
   .subnav {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .subnav span:last-child {
-    display: none;
+  .subnav button {
+    font-size: 12px;
+    padding: 0 4px;
   }
 
   #statusText {
     text-align: left;
+  }
+
+  .history-toolbar,
+  .history-card header {
+    grid-template-columns: 1fr;
+  }
+
+  .history-toolbar {
+    align-items: stretch;
+  }
+
+  .history-card header {
+    flex-direction: column;
   }
 }

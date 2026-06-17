@@ -22,6 +22,15 @@ const clearSignatureButton = document.querySelector('#clearSignature');
 const cameraToggle = document.querySelector('#cameraToggle');
 const cameraPreview = document.querySelector('#cameraPreview');
 const cameraHint = document.querySelector('#cameraHint');
+const captureView = document.querySelector('#captureView');
+const historyView = document.querySelector('#historyView');
+const navButtons = document.querySelectorAll('.subnav button');
+const historySearch = document.querySelector('#historySearch');
+const searchHistoryButton = document.querySelector('#searchHistory');
+const refreshHistoryButton = document.querySelector('#refreshHistory');
+const historyStatus = document.querySelector('#historyStatus');
+const historyEmpty = document.querySelector('#historyEmpty');
+const historyList = document.querySelector('#historyList');
 
 const ctx = canvas.getContext('2d');
 let scans = loadScans();
@@ -35,6 +44,7 @@ let zxingReader = null;
 let zxingControls = null;
 let lastCameraCode = '';
 let lastCameraCodeAt = 0;
+let historyLoaded = false;
 
 function nowIso() {
   return new Date().toISOString();
@@ -45,8 +55,41 @@ function setStatus(message, type = '') {
   statusText.className = type;
 }
 
+function setHistoryStatus(message, type = '') {
+  historyStatus.textContent = message;
+  historyStatus.className = `hint ${type}`.trim();
+}
+
 function normalizeCode(value) {
   return String(value || '').trim().replace(/\s+/g, '').toUpperCase();
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  })[char]);
+}
+
+function formatDateTime(value) {
+  if (value === null || value === undefined || value === '') return '-';
+  const rawValue = value.value || value;
+  const rawString = String(rawValue);
+  const numericValue = Number(rawString);
+  const date = Number.isFinite(numericValue)
+    ? new Date(numericValue * 1000)
+    : new Date(rawValue);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date);
 }
 
 function loadScans() {
@@ -80,6 +123,75 @@ function renderScans() {
       <button type="button" data-remove="${code}" aria-label="Remover ${code}">X</button>
     </li>
   `).join('');
+}
+
+function showView(view, activeButton = null) {
+  const isHistory = view === 'history';
+  captureView.hidden = isHistory;
+  historyView.hidden = !isHistory;
+  navButtons.forEach((button) => {
+    const fallbackTab = isHistory ? 'history' : 'panel';
+    button.classList.toggle('active', activeButton ? button === activeButton : button.dataset.tab === fallbackTab);
+  });
+  if (isHistory && !historyLoaded) loadHistory();
+  if (!isHistory) scanInput.focus();
+}
+
+function renderHistory(rows) {
+  historyEmpty.hidden = rows.length > 0;
+  historyList.innerHTML = rows.map((row) => {
+    const shipments = Array.isArray(row.shipment_ids) ? row.shipment_ids : [];
+    const visibleShipments = shipments.slice(0, 12).map((id) => `<span>${escapeHtml(id)}</span>`).join('');
+    const hiddenCount = Math.max(Number(row.package_count || 0) - shipments.length, 0);
+    const extra = hiddenCount ? `<span>+${hiddenCount}</span>` : '';
+
+    return `
+      <article class="history-card">
+        <header>
+          <div>
+            <h2>${escapeHtml(row.nodo_place || 'Nodo nao informado')}</h2>
+            <p>${escapeHtml(row.session_id)}</p>
+          </div>
+          <strong class="history-badge">${Number(row.package_count || 0)} pacotes</strong>
+        </header>
+        <div class="history-meta">
+          <span>${escapeHtml(row.driver_name || 'Motorista nao informado')}</span>
+          <span>${escapeHtml(row.driver_plate || 'Placa nao informada')}</span>
+          <span>${escapeHtml(row.carrier || 'Transportadora nao informada')}</span>
+          <span>${escapeHtml(row.route_id || 'Rota nao informada')}</span>
+          <span>${formatDateTime(row.signed_at)}</span>
+        </div>
+        <div class="history-shipments">${visibleShipments}${extra}</div>
+      </article>
+    `;
+  }).join('');
+}
+
+async function loadHistory() {
+  try {
+    setHistoryStatus('Carregando historico...');
+    refreshHistoryButton.disabled = true;
+    searchHistoryButton.disabled = true;
+    const params = new URLSearchParams({ limit: '100' });
+    const query = historySearch.value.trim();
+    if (query) params.set('q', query);
+
+    const response = await fetch(`/api/nodo-conferences/history?${params.toString()}`);
+    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(result.message || 'Falha ao carregar historico.');
+    }
+
+    historyLoaded = true;
+    renderHistory(result.rows || []);
+    setHistoryStatus(`${(result.rows || []).length} conferencias encontradas.`, 'success');
+  } catch (error) {
+    renderHistory([]);
+    setHistoryStatus(error.message, 'error');
+  } finally {
+    refreshHistoryButton.disabled = false;
+    searchHistoryButton.disabled = false;
+  }
 }
 
 function addScan(value) {
@@ -215,6 +327,7 @@ async function submitConference() {
     saveDraft();
     renderScans();
     clearSignature();
+    historyLoaded = false;
     setStatus(`Salvo. Sessao ${result.session_id}, ${result.inserted_rows} pacotes.`, 'success');
   } catch (error) {
     setStatus(error.message, 'error');
@@ -301,6 +414,17 @@ async function startCamera() {
 }
 
 addScanButton.addEventListener('click', () => addScan(scanInput.value));
+navButtons.forEach((button) => {
+  button.addEventListener('click', () => showView(button.dataset.view, button));
+});
+searchHistoryButton.addEventListener('click', loadHistory);
+refreshHistoryButton.addEventListener('click', loadHistory);
+historySearch.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    loadHistory();
+  }
+});
 scanInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
     event.preventDefault();

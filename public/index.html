@@ -20,13 +20,13 @@
       </div>
     </header>
     <nav class="subnav" aria-label="Navegacao principal">
-      <span class="active">Painel</span>
-      <span>Nova conferencia</span>
-      <span>Historico</span>
+      <button class="active" type="button" data-view="capture" data-tab="panel">Painel</button>
+      <button type="button" data-view="capture" data-tab="new">Nova conferencia</button>
+      <button type="button" data-view="history" data-tab="history">Historico</button>
     </nav>
 
     <main class="app-shell">
-      <section class="capture-panel">
+      <section id="captureView" class="capture-panel">
         <div class="topbar">
           <div>
             <p class="eyebrow">Operacao MLB</p>
@@ -106,6 +106,28 @@
           <button id="submitConference" type="button">Salvar conferencia</button>
           <p id="statusText" role="status"></p>
         </div>
+      </section>
+
+      <section id="historyView" class="capture-panel history-view" hidden>
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Historico</p>
+            <h1>Conferencias salvas</h1>
+          </div>
+          <button id="refreshHistory" class="secondary" type="button">Atualizar</button>
+        </div>
+
+        <div class="history-toolbar">
+          <label for="historySearch">
+            Buscar
+            <input id="historySearch" autocomplete="off" placeholder="Nodo, placa, motorista, rota ou shipment ID">
+          </label>
+          <button id="searchHistory" type="button">Buscar</button>
+        </div>
+
+        <p id="historyStatus" class="hint" role="status"></p>
+        <div id="historyEmpty" class="empty-state">Nenhuma conferencia encontrada.</div>
+        <div id="historyList" class="history-list"></div>
       </section>
     </main>
     <script src="/vendor/zxing-browser.bundle.js"></script>

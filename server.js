@@ -88,6 +88,9 @@ function parseTableId(tableId) {
   if (parts.length !== 3 || parts.some((part) => !part)) {
     throw new Error('BQ_SCAN_TABLE must use project.dataset.table format');
   }
+  if (!parts.every((part) => /^[A-Za-z0-9_/-]+$/.test(part))) {
+    throw new Error('BQ_SCAN_TABLE contains invalid characters');
+  }
   return { project: parts[0], dataset: parts[1], table: parts[2] };
 }
 
@@ -164,6 +167,104 @@ async function insertConferenceRows(tableRef, rows) {
   });
 }
 
+function decodeBigQueryRestValue(field, cell = {}) {
+  if (field.mode === 'REPEATED') {
+    return Array.isArray(cell.v) ? cell.v.map((item) => item.v) : [];
+  }
+  return cell.v ?? null;
+}
+
+function decodeBigQueryRestRows(response) {
+  const fields = response.data?.schema?.fields || [];
+  const rows = response.data?.rows || [];
+  return rows.map((row) => Object.fromEntries(
+    fields.map((field, index) => [field.name, decodeBigQueryRestValue(field, row.f?.[index])])
+  ));
+}
+
+async function runConferenceHistoryQuery(query, cleanLimit, cleanSearch) {
+  if (!oauthInsertClient) {
+    const [job] = await bigquery.createQueryJob({
+      query,
+      location: process.env.BQ_LOCATION || 'US',
+      params: {
+        limit: cleanLimit,
+        search: `%${cleanSearch}%`
+      }
+    });
+    const [rows] = await job.getQueryResults();
+    return rows;
+  }
+
+  const response = await oauthInsertClient.request({
+    method: 'POST',
+    url: `https://bigquery.googleapis.com/bigquery/v2/projects/${projectId}/queries`,
+    data: {
+      query,
+      useLegacySql: false,
+      location: process.env.BQ_LOCATION || 'US',
+      parameterMode: 'NAMED',
+      queryParameters: [
+        {
+          name: 'limit',
+          parameterType: { type: 'INT64' },
+          parameterValue: { value: String(cleanLimit) }
+        },
+        {
+          name: 'search',
+          parameterType: { type: 'STRING' },
+          parameterValue: { value: `%${cleanSearch}%` }
+        }
+      ]
+    }
+  });
+
+  return decodeBigQueryRestRows(response);
+}
+
+async function queryConferenceHistory({ limit = 80, search = '' } = {}) {
+  const tableRef = parseTableId(scanTable);
+  const tableName = `\`${tableRef.project}.${tableRef.dataset}.${tableRef.table}\``;
+  const cleanLimit = Math.min(Math.max(Number(limit) || 80, 1), 300);
+  const cleanSearch = text(search, 120).toUpperCase();
+  const whereSearch = cleanSearch
+    ? `AND (
+        UPPER(session_id) LIKE @search OR
+        UPPER(nodo_place) LIKE @search OR
+        UPPER(driver_name) LIKE @search OR
+        UPPER(driver_plate) LIKE @search OR
+        UPPER(carrier) LIKE @search OR
+        UPPER(route_id) LIKE @search OR
+        UPPER(shipment_id) LIKE @search
+      )`
+    : '';
+
+  const query = `
+    SELECT
+      session_id,
+      ANY_VALUE(nodo_place) AS nodo_place,
+      ANY_VALUE(driver_name) AS driver_name,
+      ANY_VALUE(driver_document) AS driver_document,
+      ANY_VALUE(driver_plate) AS driver_plate,
+      ANY_VALUE(carrier) AS carrier,
+      ANY_VALUE(route_id) AS route_id,
+      ANY_VALUE(operator_name) AS operator_name,
+      ANY_VALUE(notes) AS notes,
+      MIN(scanned_at) AS first_scanned_at,
+      MAX(signed_at) AS signed_at,
+      COUNT(DISTINCT shipment_id) AS package_count,
+      ARRAY_AGG(DISTINCT shipment_id ORDER BY shipment_id LIMIT 30) AS shipment_ids
+    FROM ${tableName}
+    WHERE signed_at >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)
+    ${whereSearch}
+    GROUP BY session_id
+    ORDER BY signed_at DESC
+    LIMIT @limit
+  `;
+
+  return runConferenceHistoryQuery(query, cleanLimit, cleanSearch);
+}
+
 app.use(express.json({ limit: '8mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -210,6 +311,28 @@ app.get('/api/insucessos-nex-mlb', async (req, res) => {
     res.status(500).json({
       error: 'BIGQUERY_QUERY_FAILED',
       message: error.message
+    });
+  }
+});
+
+app.get('/api/nodo-conferences/history', async (req, res) => {
+  cors(res);
+
+  try {
+    const rows = await queryConferenceHistory({
+      limit: req.query.limit,
+      search: req.query.q
+    });
+    res.json({
+      ok: true,
+      table: scanTable,
+      rows
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'BIGQUERY_HISTORY_FAILED',
+      message: error.message,
+      errors: error.errors
     });
   }
 });

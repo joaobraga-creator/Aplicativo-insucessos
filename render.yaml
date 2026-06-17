@@ -12,4 +12,4 @@ services:
       - key: BQ_LOCATION
         value: US
       - key: BQ_SCAN_TABLE
-        value: meli-bi-data.nex_operacao.nodo_package_conferences
+        value: meli-bi-data.SBOX_MLBPLACES.nodo_package_conferences

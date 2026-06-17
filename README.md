@@ -12,7 +12,7 @@ Configure a chave da service account fora do HTML/Grid:
 ```powershell
 $env:GOOGLE_APPLICATION_CREDENTIALS="C:\caminho\para\service-account.json"
 $env:BQ_PROJECT_ID="meli-bi-data"
-$env:BQ_SCAN_TABLE="meli-bi-data.nex_operacao.nodo_package_conferences"
+$env:BQ_SCAN_TABLE="meli-bi-data.SBOX_MLBPLACES.nodo_package_conferences"
 npm install
 npm start
 ```
@@ -36,7 +36,15 @@ A chave nunca deve ir para HTML, Grid ou frontend. O BigQuery e acessado somente
 
 ## Deploy no Render
 
-O arquivo `render.yaml` descreve um Web Service Docker. No Render, configure tambem a credencial do Google de uma destas formas:
+O arquivo `render.yaml` descreve um Web Service Docker, mas o Render fica fora do ambiente Google/MELI. Se o BigQuery estiver protegido por VPC Service Controls, o endpoint de salvamento retornara:
+
+```text
+Request is prohibited by organization's policy
+```
+
+Nesse caso, use Cloud Run/Fury dentro do ambiente permitido. Render pode servir a tela, mas nao deve ser usado para gravar no BigQuery protegido.
+
+Se ainda for usado em um ambiente sem VPC Service Controls, configure a credencial do Google de uma destas formas:
 
 - `GOOGLE_APPLICATION_CREDENTIALS` apontando para um arquivo de chave montado como Secret File.
 - Ou `GOOGLE_APPLICATION_CREDENTIALS_JSON` se voce adaptar o start para materializar a chave antes de subir o Node.
@@ -46,7 +54,7 @@ Variaveis esperadas:
 ```text
 BQ_PROJECT_ID=meli-bi-data
 BQ_LOCATION=US
-BQ_SCAN_TABLE=meli-bi-data.nex_operacao.nodo_package_conferences
+BQ_SCAN_TABLE=meli-bi-data.SBOX_MLBPLACES.nodo_package_conferences
 ```
 
 ## Deploy recomendado em GCP

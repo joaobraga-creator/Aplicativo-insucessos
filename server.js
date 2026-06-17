@@ -9,7 +9,7 @@ const app = express();
 const port = Number(process.env.PORT || 8080);
 const projectId = process.env.BQ_PROJECT_ID || 'meli-bi-data';
 const queryPath = process.env.QUERY_PATH || new URL('./query_insucessos_nex_mlb.sql', import.meta.url);
-const scanTable = process.env.BQ_SCAN_TABLE || 'meli-bi-data.nex_operacao.nodo_package_conferences';
+const scanTable = process.env.BQ_SCAN_TABLE || 'meli-bi-data.SBOX_MLBPLACES.nodo_package_conferences';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const bigquery = new BigQuery({ projectId });

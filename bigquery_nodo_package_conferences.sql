@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS `meli-bi-data.nex_operacao.nodo_package_conferences` (
+CREATE TABLE IF NOT EXISTS `meli-bi-data.SBOX_MLBPLACES.nodo_package_conferences` (
   session_id STRING NOT NULL,
   shipment_id STRING NOT NULL,
   scan_sequence INT64,

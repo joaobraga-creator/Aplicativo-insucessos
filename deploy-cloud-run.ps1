@@ -1,7 +1,7 @@
 param(
   [string]$ProjectId = "bidata-cross-sa-batch",
   [string]$Region = "us-east1",
-  [string]$ServiceName = "nex-insucessos-grid-api",
+  [string]$ServiceName = "nex-nodo-conferencia",
   [string]$RuntimeServiceAccount = "gestao-nodos-mlb@bidata-cross-sa-batch.iam.gserviceaccount.com"
 )
 
@@ -20,5 +20,5 @@ gcloud run deploy $ServiceName `
   --region=$Region `
   --service-account=$RuntimeServiceAccount `
   --allow-unauthenticated `
-  --set-env-vars="BQ_PROJECT_ID=meli-bi-data,BQ_LOCATION=US,CACHE_TTL_SECONDS=300" `
+  --set-env-vars="BQ_PROJECT_ID=meli-bi-data,BQ_LOCATION=US,CACHE_TTL_SECONDS=300,BQ_SCAN_TABLE=meli-bi-data.SBOX_MLBPLACES.nodo_package_conferences" `
   --quiet
